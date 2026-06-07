@@ -55,7 +55,7 @@ The `iris` container connects to the `fhir` container over Docker's internal net
 
 ## Patient data
 
-The summary engine requires at least one patient in the `fhir` container's FHIR R4 server (`http://localhost:52773/fhir/r4`).
+The summary engine requires at least one patient in the `fhir` container's FHIR R4 server (`http://localhost:52775/fhir/r4`).
 
 **Load with any FHIR R4 client** (Postman, HAPI FHIR CLI, curl) or generate realistic synthetic profiles with [Synthea](https://github.com/synthetichealth/synthea).
 
