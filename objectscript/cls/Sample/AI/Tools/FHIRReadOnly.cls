@@ -3,7 +3,7 @@ Include (%AI, %occStatus)
 /// Read-only FHIR tools for quick interoperability analysis workflows.
 ///
 /// Configure the FHIR target with environment variables:
-///   FHIR_BASE_URL   e.g. http://localhost:52773/fhir/r4
+///   FHIR_BASE_URL   e.g. http://fhir:52773/fhir/r4  (Docker service name, set automatically by docker-compose)
 ///   FHIR_BEARER_TOKEN  optional bearer token
 ///   FHIR_BASIC_USER / FHIR_BASIC_PASS  optional basic auth credentials
 Class Sample.AI.Tools.FHIRReadOnly Extends %AI.Tool
@@ -44,12 +44,12 @@ Method GetObservationSummary(patientId As %String, category As %String = "", lim
     }
 
     Set max = $SELECT(limit>100:100, limit<1:1, 1:limit)
-    Set query = "patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max _ "&_sort=-date"
+    Set query = "patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max
     If category '= "" {
         Set query = query _ "&category=" _ ..UrlEncode(category)
     }
 
-    Return ..GetFHIR("Observation?" _ query)
+    Return ..GetFHIRWithFallback("Observation?" _ query, patientId)
 }
 
 /// Fetch allergy/intolerance records for a patient.
@@ -61,7 +61,7 @@ Method GetAllergies(patientId As %String, limit As %Integer = 20) As %DynamicObj
 
     Set max = $SELECT(limit>100:100, limit<1:1, 1:limit)
     Set query = "patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max
-    Return ..GetFHIR("AllergyIntolerance?" _ query)
+    Return ..GetFHIRWithFallback("AllergyIntolerance?" _ query, patientId)
 }
 
 /// Fetch conditions for a patient, optionally filtering by clinical status.
@@ -77,7 +77,7 @@ Method GetConditions(patientId As %String, clinicalStatus As %String = "", limit
         Set query = query _ "&clinical-status=" _ ..UrlEncode(clinicalStatus)
     }
 
-    Return ..GetFHIR("Condition?" _ query)
+    Return ..GetFHIRWithFallback("Condition?" _ query, patientId)
 }
 
 /// Fetch medication requests for a patient, optionally filtering by status.
@@ -93,7 +93,7 @@ Method GetMedicationRequests(patientId As %String, status As %String = "", limit
         Set query = query _ "&status=" _ ..UrlEncode(status)
     }
 
-    Return ..GetFHIR("MedicationRequest?" _ query)
+    Return ..GetFHIRWithFallback("MedicationRequest?" _ query, patientId)
 }
 
 /// Fetch encounters for a patient, optionally filtering by status.
@@ -104,12 +104,12 @@ Method GetEncounters(patientId As %String, status As %String = "", limit As %Int
     }
 
     Set max = $SELECT(limit>100:100, limit<1:1, 1:limit)
-    Set query = "subject:Patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max _ "&_sort=-date"
+    Set query = "patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max
     If status '= "" {
         Set query = query _ "&status=" _ ..UrlEncode(status)
     }
 
-    Return ..GetFHIR("Encounter?" _ query)
+    Return ..GetFHIRWithFallback("Encounter?" _ query, patientId)
 }
 
 /// Fetch care plans for a patient, optionally filtering by status.
@@ -120,12 +120,12 @@ Method GetCarePlans(patientId As %String, status As %String = "", limit As %Inte
     }
 
     Set max = $SELECT(limit>100:100, limit<1:1, 1:limit)
-    Set query = "subject:Patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max
+    Set query = "patient=" _ ..UrlEncode(patientId) _ "&_count=" _ max
     If status '= "" {
         Set query = query _ "&status=" _ ..UrlEncode(status)
     }
 
-    Return ..GetFHIR("CarePlan?" _ query)
+    Return ..GetFHIRWithFallback("CarePlan?" _ query, patientId)
 }
 
 /// Aggregate a compact patient signal snapshot for Smart Patient Summary MVP (chunk 1).
@@ -445,6 +445,33 @@ Method CountBundleEntries(bundle As %DynamicObject) As %Integer [ Internal ]
     Return +..SafeGet(bundle, "total")
 }
 
+/// Search with automatic fallback: if the bare patient ID returns 0 entries,
+/// retries with the full "Patient/<id>" reference. Handles servers that index
+/// references differently (some require the type prefix, some do not).
+Method GetFHIRWithFallback(path As %String, patientId As %String) As %DynamicObject [ Internal ]
+{
+    Set result = ..GetFHIR(path)
+    If ..CountBundleEntries(result) > 0 {
+        Return result
+    }
+    // If result has an error key, return as-is — no point retrying
+    If $ISOBJECT(result) && (..SafeGet(result, "error") '= "") {
+        Return result
+    }
+    // Retry with full Patient/ prefix if not already present
+    If $EXTRACT(patientId, 1, 8) '= "Patient/" {
+        Set fullRef = "Patient/" _ patientId
+        Set altPath = $REPLACE(path, "patient=" _ ..UrlEncode(patientId), "patient=" _ ..UrlEncode(fullRef))
+        If altPath '= path {
+            Set retry = ..GetFHIR(altPath)
+            If ..CountBundleEntries(retry) > 0 {
+                Return retry
+            }
+        }
+    }
+    Return result
+}
+
 Method GetFHIR(path As %String) As %DynamicObject [ Internal ]
 {
     Set baseUrl = ..GetBaseUrl()
@@ -516,7 +543,7 @@ Method GetBaseUrl() As %String [ Internal ]
         Set base = $GET(^||ENV("FHIR_BASE_URL"))
     }
     If base = "" {
-        Set base = "http://localhost:52773/fhir/r4"
+        Set base = "http://fhir:52773/fhir/r4"
     }
     Return $ZSTRIP(base, "<W", "/")
 }
