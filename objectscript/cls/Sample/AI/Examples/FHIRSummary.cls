@@ -6,8 +6,8 @@ Class Sample.AI.Examples.FHIRSummary Extends %RegisteredObject
 
 /// Runs GenerateSmartSummary on a fixed patient id and prints JSON.
 ///
-/// Expected environment for local FHIR_TestServer:
-///   FHIR_BASE_URL=http://localhost:52773/fhir/r4
+/// Expected environment (set automatically by docker-compose):
+///   FHIR_BASE_URL=http://fhir:52773/fhir/r4
 ///   FHIR_BASIC_USER=_SYSTEM
 ///   FHIR_BASIC_PASS=SYS
 ClassMethod DemoDeterministic(patientId As %String = "a3d599da-a9de-8caa-950a-6bc057b1b261", role As %String = "ed", detailMode As %String = "brief") As %Status

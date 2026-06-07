@@ -3,7 +3,7 @@ Include (%AI, %occStatus)
 /// Read-only FHIR tools for quick interoperability analysis workflows.
 ///
 /// Configure the FHIR target with environment variables:
-///   FHIR_BASE_URL   e.g. http://localhost:52773/fhir/r4
+///   FHIR_BASE_URL   e.g. http://fhir:52773/fhir/r4  (Docker service name, set automatically by docker-compose)
 ///   FHIR_BEARER_TOKEN  optional bearer token
 ///   FHIR_BASIC_USER / FHIR_BASIC_PASS  optional basic auth credentials
 Class Sample.AI.Tools.FHIRReadOnly Extends %AI.Tool
