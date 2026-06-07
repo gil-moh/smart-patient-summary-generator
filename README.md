@@ -1,227 +1,134 @@
-# Smart Patient Summary Agent for FHIR (Contest Submission)
+# Smart Patient Summary Agent for FHIR
 
-This repository contains a contest submission for InterSystems Programming Contest: AI Agents for FHIR.
+An AI agent built on InterSystems IRIS AI Hub that generates role-specific clinical summaries from FHIR patient data. Given a patient ID, it queries a FHIR R4 server, extracts structured clinical signals, and produces four distinct narrative summaries tailored to:
 
-## Contest Submission Details
+- **ED Doctor** — safety-first, immediate action priorities, disposition context
+- **Care Manager** — continuity gaps, transitions, care coordination tasks
+- **Patient** — plain language, self-care guidance, warning signs
+- **Family Caregiver** — monitoring checkpoints, medication safety, escalation triggers
 
-- Contest: InterSystems Programming Contest: AI Agents for FHIR
-- Category fit: AI agent used in an interoperability FHIR solution
-- Open source repository: this repository
-- Primary implementation language: ObjectScript (with supporting Python test-data tooling)
-
-## Idea Link
-
-- Idea page: TODO add your idea or Open Exchange idea link here
+Output is deterministic and evidence-based — same FHIR data, four different narrative framings.
 
 ## Team
 
-- Team lead: Gil Tavassy (InterSystems Developer Community profile: https://community.intersystems.com/user/gil-tavassy)
-- LinkedIn: https://www.linkedin.com/in/gil-tavassy-5703b311b
+- Gil Tavassy — [Developer Community profile](https://community.intersystems.com/user/gil-tavassy) · [LinkedIn](https://www.linkedin.com/in/gil-tavassy-5703b311b)
 
 Submission mode: solo project.
 
-## What This App Does
+## Architecture
 
-Smart Patient Summary Agent generates role-specific clinical summaries over FHIR data for:
+Two containers work together:
 
-- ED Doctor
-- Care Manager
-- Patient
-- Family Caregiver
+| Container | Image | Purpose |
+|---|---|---|
+| `fhir` | `intersystemsdc/irishealth-community:latest` | FHIR R4 server — stores and serves patient data |
+| `iris` | `irishealth-community:2026.2.0AI.162.0` (AI Hub EAP) | Runs the ObjectScript summary engine |
 
-The output is deterministic, evidence-based, and formatted as actionable narrative sections:
+The `iris` container connects to the `fhir` container over Docker's internal network.
 
-- Patient Overview
-- Clinical Details (conditions, medications, allergies, encounters, observations, care plans)
-- Current Issues
-- Recent Changes
-- Risks / Follow-up
-- Role-specific action plan
+## Prerequisites
 
-## Originality and Significant Improvement
+- **Docker Desktop** (Windows / Mac) or Docker Engine (Linux)
+- **InterSystems IRIS AI Hub EAP image** — the AI Hub is baked into this image.
+  1. Register / log in at https://evaluation.intersystems.com/Eval/early-access/AIHub and select the **AI Hub** program.
+  2. Download **two files**:
+     - `irishealth-community-2026.2.0AI.162.0-docker.tar.gz` (x64) — or the `arm64` variant for Mac M-series
+     - `iris-container-x64.key` (or `iris-container-arm64.key` for ARM64)
+  3. Load and tag the image (one-time step per machine):
+     ```
+     docker image load -i irishealth-community-2026.2.0AI.162.0-docker.tar.gz
+     docker tag docker.iscinternal.com/docker-intersystems/intersystems/irishealth-community:2026.2.0AI.162.0 irishealth-community:2026.2.0AI.162.0
+     ```
 
-This submission provides a concrete, working FHIR-focused agent workflow rather than a generic chat wrapper.
-Key differentiators:
+## Quick start
 
-- Role-specific narrative adaptation from the same FHIR evidence set
-- Deterministic summary generation for reproducible judging
-- Clinical-detail extraction that surfaces medication names, allergy details, encounter reasons, and inactive-condition timelines
-- Full-evidence mode without hidden truncation, to keep review transparent
-- Rich synthetic profile generator for realistic scenario testing (demo-rich-002 to demo-rich-005)
+1. Clone this repository.
+2. Copy your `iris-container-x64.key` into the `keys/` folder at the repo root.
+3. Build and start both containers:
+   ```
+   docker compose build
+   docker compose up -d
+   ```
+4. Wait ~60 seconds for both containers to become healthy.
+5. Load patient data into the FHIR server (see [Patient data](#patient-data) below).
+6. Run a summary.
 
-## Installation and Run (Quick Path)
+## Patient data
 
-Detailed steps are in [RUNBOOK.md](RUNBOOK.md). Quick path (PowerShell, Windows):
+The summary engine requires at least one patient in the `fhir` container's FHIR R4 server (`http://localhost:52773/fhir/r4`).
 
-```powershell
-$docker = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
-& $docker start iris_fhir iris-ai-hub-162
-& $docker exec iris-ai-hub-162 sh -lc "mkdir -p /tmp/aihub/Sample/AI/Tools /tmp/aihub/Sample/AI/ToolSet /tmp/aihub/Sample/AI/Examples"
-& $docker cp C:\Projects\FHIR\ai-hub-eap\objectscript\cls\Sample\AI\Tools\FHIRReadOnly.cls iris-ai-hub-162:/tmp/aihub/Sample/AI/Tools/FHIRReadOnly.cls
-& $docker cp C:\Projects\FHIR\ai-hub-eap\objectscript\cls\Sample\AI\ToolSet\FHIRReadOnly.cls iris-ai-hub-162:/tmp/aihub/Sample/AI/ToolSet/FHIRReadOnly.cls
-& $docker cp C:\Projects\FHIR\ai-hub-eap\objectscript\cls\Sample\AI\Examples\FHIRSummary.cls iris-ai-hub-162:/tmp/aihub/Sample/AI/Examples/FHIRSummary.cls
+**Load with any FHIR R4 client** (Postman, HAPI FHIR CLI, curl) or generate realistic synthetic profiles with [Synthea](https://github.com/synthetichealth/synthea).
 
-$script = @'
-zn "USER"
-do $system.OBJ.ImportDir("/tmp/aihub/Sample/AI/Tools","*.cls","ck")
-do $system.OBJ.ImportDir("/tmp/aihub/Sample/AI/ToolSet","*.cls","ck")
-do $system.OBJ.ImportDir("/tmp/aihub/Sample/AI/Examples","*.cls","ck")
-set ^||ENV("FHIR_BASE_URL")="http://host.docker.internal:52773/fhir/r4"
-set ^||ENV("FHIR_BASIC_USER")="_SYSTEM"
-set ^||ENV("FHIR_BASIC_PASS")="SYS"
-do ##class(Sample.AI.Examples.FHIRSummary).DemoNarrativeAllRoles("demo-rich-003","detailed")
-halt
-'@
+The FHIR server is accessible on the host at `http://localhost:52775/fhir/r4`. The `iris` container reaches it internally at `http://fhir:52773/fhir/r4`.
 
-Set-Content -Path C:\Projects\FHIR\ai-hub-eap\tmp_contest_demo.mac -Value $script -NoNewline
-& $docker cp C:\Projects\FHIR\ai-hub-eap\tmp_contest_demo.mac iris-ai-hub-162:/tmp/aihub/tmp_contest_demo.mac
-& $docker exec iris-ai-hub-162 sh -lc "iris session IRIS < /tmp/aihub/tmp_contest_demo.mac"
+**Note the patient ID** returned when you POST the Patient resource — you'll use it in the demo commands below.
+
+## Running a summary
+
+Replace `<patientId>` with your patient's FHIR ID:
+
+```bash
+# All four roles, detailed mode
+docker exec smart-patient-summary-generator-iris-1 bash -c \
+  "printf 'Do ##class(Sample.AI.Examples.FHIRSummary).DemoNarrativeAllRoles(\"<patientId>\",\"detailed\")\nHalt\n' \
+  | iris session IRIS -U USER 2>&1 | grep -Ev '^(USER>|Node:)'"
+
+# Single role (ed, care_manager, patient, or caregiver)
+docker exec smart-patient-summary-generator-iris-1 bash -c \
+  "printf 'Do ##class(Sample.AI.Examples.FHIRSummary).DemoNarrative(\"<patientId>\",\"ed\",\"detailed\")\nHalt\n' \
+  | iris session IRIS -U USER 2>&1 | grep -Ev '^(USER>|Node:)'"
+
+# Brief mode (2 items per section)
+docker exec smart-patient-summary-generator-iris-1 bash -c \
+  "printf 'Do ##class(Sample.AI.Examples.FHIRSummary).DemoNarrativeAllRoles(\"<patientId>\",\"brief\")\nHalt\n' \
+  | iris session IRIS -U USER 2>&1 | grep -Ev '^(USER>|Node:)'"
 ```
 
-Expected result:
+## All entry points
 
-- Narrative output printed for all roles with populated clinical details
+| Method | Description |
+|---|---|
+| `FHIRSummary.DemoNarrativeAllRoles(patientId, detailMode)` | Four-role narrative — recommended starting point |
+| `FHIRSummary.DemoNarrative(patientId, role, detailMode)` | Single role narrative (`ed`, `care_manager`, `patient`, `caregiver`) |
+| `FHIRSummary.DemoDeterministic(patientId, role, detailMode)` | Single role as JSON |
+| `FHIRSummary.DemoRoleComparison(patientId, detailMode)` | All roles as JSON |
+| `FHIRSummary.DemoNarrativeToFile(patientId, role, detailMode, path)` | Write narrative to file |
 
-## Demo Profiles
+`detailMode`: `"brief"` (2 items/section) or `"detailed"` (full evidence).
 
-Additional realistic test profiles can be generated with:
+## Environment variables
 
-```powershell
-c:/Projects/FHIR/.venv/Scripts/python.exe C:/Projects/FHIR/FHIR_TestServer/create_rich_demo_profiles.py
-```
+Override before `docker compose up` to connect to an external FHIR server:
 
-Available profile IDs:
+| Variable | Default | Purpose |
+|---|---|---|
+| `FHIR_BASE_URL` | `http://fhir:52773/fhir/r4` | FHIR R4 endpoint |
+| `FHIR_BASIC_USER` | `_SYSTEM` | Basic auth username |
+| `FHIR_BASIC_PASS` | `SYS` | Basic auth password |
+| `FHIR_BEARER_TOKEN` | _(none)_ | Bearer token (alternative to basic auth) |
 
-- demo-rich-002
-- demo-rich-003
-- demo-rich-004
-- demo-rich-005
+## FHIR resources used
 
-## Detailed Behavior Description (No Video Required)
+The engine queries: `Patient`, `Observation`, `AllergyIntolerance`, `Condition`, `MedicationRequest`, `Encounter`, `CarePlan`.
 
-This submission uses a detailed written behavior description instead of a demo video.
-The README and [RUNBOOK.md](RUNBOOK.md) provide reproducible commands and expected outputs for evaluator verification.
+## Output structure
 
-## Contest Compliance Checklist
+Each role summary contains:
 
-- Fully functional application or library: yes
-- Original work / significant improvement: yes (see section above)
-- Open source code: yes
-- English README with installation steps: yes
-- Link to idea included: TODO fill before submission
-- Video demo or detailed app description: detailed behavior description provided in this README and in [RUNBOOK.md](RUNBOOK.md)
-- Team members listed (if team submission): not applicable (solo submission)
-
----
-
-# InterSystems AI Hub EAP
-
-Welcome to the Early Access Program for the InterSystems AI Hub! 
-The [InterSystems AI Hub](#what-is-the-ai-hub) helps InterSystems customers accelerate their AI development and govern their use of AI assets. Whether you're looking for a native IRIS experience to build agents from scratch, expose IRIS-based business logic to external agents, or operationalize a langchain app by integrating it with the IRIS security model, the AI Hub gets you going as fast as you can say G-P-T.
-
-See below for instructions to download and install the software, and an overview of the documentation per use case. 
-
-> [!IMPORTANT]
-> As part of the EAP, we're making pre-release software available through this portal.  We're working hard to get the packaging and integration with core IRIS features, including credential management, right and therefore some of the APIs and access control features are likely to change in the course of the API. We intend to document such changes here, in the change log at the bottom of the page.
-
-> [!CAUTION]
-> This pre-release software is not meant to be used in production environments.
-
-For any questions, bug reports or other feedback, please use the Issues section of this repository.
-
-## Accessing the software
-
-You can download full kits or docker container images that include the latest InterSystems AI Hub updates from the [Early Access Program portal](https://evaluation.intersystems.com/Eval/early-access/AIHub). 
-
-> [!NOTE]
-> In the instructions below, please note the version number is included in some of the file names, and you may need to adjust the commands to match the files you downloaded.
-
-No specific license is required to use the AI Hub. You can use your regular development license. 
-
-The kits posted on this page can be installed like a normal InterSystems IRIS kit using interactive or silent installer. 
-
-When using a container image, use the following commands to import and launch the image after downloading:
-
-```Shell
-docker image load -i /path/to/iris-community-2026.2.0AI.162.0-docker.tar.gz
-
-docker run --name iris-ai-hub -p 1972:1972 -p 52773:52773 \
--d  docker.iscinternal.com/docker-intersystems/intersystems/iris-community:2026.2.0AI.162.0
-```
-
-Note, if you want to create a remote HTTP MCP server, you may wish to expose a third port, e.g. `-p 8080:8080`. If you are using a M-Chip Mac, you will need to use the arm64 version, and change image name in the commands above accordingly. 
-
-For more about optional parameters, such as `--key` and `--volume`, see the documentation on [running IRIS in containers](https://docs.intersystems.com/irislatest/csp/docbook/DocBook.UI.Page.cls?KEY=AFL_containers#AFL_containers_deploy_run1).
-
-To change the default password, see the documentation above or use the following commands:
-```Shell
-docker exec -it iris-ai-hub iris session iris -U %SYS
-
-%SYS> write ##class(Security.Users).UnExpireUserPasswords("*")
-```
+- **Patient Overview** — demographics and evidence inventory
+- **Clinical Details** — conditions, medications, allergies, encounters, observations, care plans
+- **Current Issues** — deterministic extraction of active problems, abnormal findings, alerts
+- **Recent Changes** — trend signals and data freshness
+- **Risks / Follow-up** — evidence-based escalation triggers
+- **Role-Specific Action Plan** — immediate priorities, weekly actions, escalation criteria
 
 ## What is the AI Hub?
 
-The AI Hub consists of two main pieces:
+InterSystems AI Hub is the AI SDK for IRIS — it provides ObjectScript, Python, and Java APIs for building agents, tool-based pipelines, and RAG applications that run natively on IRIS.
 
-The **AI SDK** helps users who develop applications on IRIS to take advantage of AI resources such as AI models (with an initial focus on LLMs) and external MCP Servers. It offers an API that abstracts over the specifics of the various AI service providers' own APIs and governs access to these using IRIS RBAC policies, consistent with the security model of the rest of your IRIS based logic. 
-The AI SDK is available for ObjectScript, Python, and Java developers. For Python and Java, we're ensuring this is familiar to developers already working with AI by implementing the [langchain](https://docs.langchain.com/) and [LangChain4J](https://docs.langchain4j.dev/) APIs, respectively, but ensuring access to resources is governed through the same IRIS Config Store.
-
-The **MCP Server** facilitates exposing customer business logic and existing IRIS functionality through an MCP Server, such that Agents and other external MCP Clients can easily include this in their agentic workflows. Again, access to these is governed using standard IRIS RBAC policies. 
-Exposing business logic as MCP tools can be achieved entirely declaratively, either using an XData block in a class definition, or a simple user interface.
-
-![Basic Diagram](img/basic-diagram.png)
-
-The blocks in the middle of the diagram represent MCP Server and toolset definitions that we'll build on top of the MCP Server capability and will start making available as part of future IRIS releases.
-
-> [!NOTE]
-> Not all capabilities have been fully implemented or included in the available kits, please check in regularly for updates, or subscribe to this repo for updates!
-
-## How to use the AI Hub?
-
-The AI Hub offers dedicated experiences for specific audiences and use cases:
-
-### :lobster: I've got my own agent, just give me tools!
-
-If you're not looking to develop, but rather wire an AI such as Claude Desktop to your existing business logic or data, the AI Hub includes an MCP Server capability that allows you to publish your IRIS-native code and data as tools. Through a low-code interface, you can assemble a toolset that contains any combination of class methods, SQL or FHIR queries, and Business Services, and choose the security policies appropriate for your scenario.
-
-* [MCP Server guide](MCP_Server_Guide.md)
-* [MCP Server examples](MCP_Server_Examples.md)
-* [Declarative toolset definition](ObjectScript_SDK_Guide.md#building-toolsets)
-* [Toolset definition UI] (forthcoming)
-
-### :robot: I'm an IRIS developer, looking to build an agent
-
-The AI Hub includes a rich SDK for ObjectScript developers who want to build AI apps or agents using intuitive abstractions that run natively on IRIS. 
-We take care of the plumbing, security, accounting, and other boring stuff so you can innovate faster and teach that agent exactly what's specific to your business. 
-
-* [ObjectScript guide - basics](ObjectScript_SDK_Guide.md)
-* [ObjectScript guide - advanced features](ObjectScript_SDK.Advanced.md)
-* [ObjectScript examples](ObjectScript_SDK_Examples.md)
-
-### :snake: I'm a langchain developer, looking to deploy to production
-
-If you're developing in [langchain](https://docs.langchain.com/), the leading Python framework for developing AI applications, you can easily integrate your app with the IRIS security model. Simply store the configuration and credentials for hosted LLMs and remote MCP Servers in the [Config Store](#the-config-store) on IRIS and avoid having to juggle those through impractical environment variables or files. IRIS will not only enforce Role-Based Access Control (RBAC) policies, but can also take care of auditing and offer a central point of governance. 
-This same langchain extension also offers access to our `VectorStore` implementation, exposing IRIS Vector Search to langchain users.
-
-* [LangChain guide](langchain_SDK.md)
-* [Config Store guide](Config_Store_Guide.md)
-
-### :coffee: I'm a LangChain4J developer, looking to deploiy to production
-
-An experience very similar to the Python one for langchain described above will soon be available for [LangChain4J](https://docs.langchain4j.dev/).
-
-* [LangChain4J guide] (forthcoming)
-
-### :lock: The Config Store
-
-While not specific to the AI Hub, this EAP distribution also includes a new feature called the Config Store, which enables secure storage and governed access to various types of configurations, for example to reach out to external systems. It stores credentials and other secrets in the [IRIS Wallet](https://docs.intersystems.com/irislatest/csp/docbook/Doc.View.cls?KEY=ROARS_secrets_mgmt), adding a convenient mechanism to manage the coordinates and settings that complement those credentials. 
-The different components in the AI Hub are all designed to find LLM and remote MCP server configurations in this new store.
-
-* [Config Store guide](Config_Store_Guide.md)
-
-You can find an example of how to use the config store as part of the [langchain guide](langchain_SDK.md)
-
-## How to reach out
-
-If you have any questions or feedback, please file them as issues on this repository, which makes them visible for the combined InterSystems team, or send them straight through email to [Benjamin De Boe](mailto:benjamin.de.boe@intersystems.com).
+- [ObjectScript SDK guide](ObjectScript_SDK_Guide.md)
+- [Advanced features](ObjectScript_SDK_Advanced.md)
+- [Examples](ObjectScript_SDK_Examples.md)
+- [MCP Server guide](MCP_Server_Guide.md)
+- [LangChain guide](langchain_SDK.md)
+- [Config Store guide](Config_Store_Guide.md)
