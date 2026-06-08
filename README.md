@@ -17,14 +17,13 @@ Submission mode: solo project.
 
 ## Architecture
 
-Two containers work together:
+One container runs the summary engine and connects to your FHIR server:
 
 | Container | Image | Purpose |
 |---|---|---|
-| `fhir` | `intersystemsdc/irishealth-community:latest` | FHIR R4 server — stores and serves patient data |
 | `iris` | `irishealth-community:2026.2.0AI.162.0` (AI Hub EAP) | Runs the ObjectScript summary engine |
 
-The `iris` container connects to the `fhir` container over Docker's internal network.
+The container connects to a FHIR R4 server running on your host machine (or any reachable URL configured in `.env`).
 
 ## Prerequisites
 
@@ -44,22 +43,21 @@ The `iris` container connects to the `fhir` container over Docker's internal net
 
 1. Clone this repository.
 2. Copy your `iris-container-x64.key` into the `keys/` folder at the repo root.
-3. Build and start both containers:
+3. Open `.env` and set `FHIR_BASE_URL` to your FHIR server's address. The default (`http://host.docker.internal:52773/fhir/r4`) points to the standard IRIS web port on your host machine — no change needed if that is where your server runs.
+4. Build and start:
    ```
    docker compose build
    docker compose up -d
    ```
-4. Wait ~60 seconds for both containers to become healthy.
-5. Load patient data into the FHIR server (see [Patient data](#patient-data) below).
-6. Run a summary.
+5. Wait ~60 seconds for the container to become healthy.
+6. Load patient data into your FHIR server (see [Patient data](#patient-data) below).
+7. Run a summary.
 
 ## Patient data
 
-The summary engine requires at least one patient in the `fhir` container's FHIR R4 server (`http://localhost:52775/fhir/r4`).
+The summary engine requires at least one patient in your FHIR R4 server.
 
 **Load with any FHIR R4 client** (Postman, HAPI FHIR CLI, curl) or generate realistic synthetic profiles with [Synthea](https://github.com/synthetichealth/synthea).
-
-The FHIR server is accessible on the host at `http://localhost:52775/fhir/r4`. The `iris` container reaches it internally at `http://fhir:52773/fhir/r4`.
 
 **Note the patient ID** returned when you POST the Patient resource — you'll use it in the demo commands below.
 
@@ -98,11 +96,11 @@ docker exec smart-patient-summary-generator-iris-1 bash -c \
 
 ## Environment variables
 
-Override before `docker compose up` to connect to an external FHIR server:
+Set in `.env` (loaded automatically by Docker Compose):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `FHIR_BASE_URL` | `http://fhir:52773/fhir/r4` | FHIR R4 endpoint |
+| `FHIR_BASE_URL` | `http://host.docker.internal:52773/fhir/r4` | FHIR R4 endpoint |
 | `FHIR_BASIC_USER` | `_SYSTEM` | Basic auth username |
 | `FHIR_BASIC_PASS` | `SYS` | Basic auth password |
 | `FHIR_BEARER_TOKEN` | _(none)_ | Bearer token (alternative to basic auth) |
