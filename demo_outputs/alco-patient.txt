@@ -1,0 +1,57 @@
+
+Example - Smart Patient Summary
+
+Patient Overview
+- Patient: Alex Drinkwater
+- Demographics: male, DOB 1982-07-11
+- Evidence available: problems, medications, allergies, recent encounters, observations, and care plan context.
+
+Clinical Details
+- Conditions: Alcohol use disorder (active); Alcoholic liver cirrhosis (active); Chronic hepatitis C (active); Syphilis (active); Alcohol use disorder (active); Alcoholic liver cirrhosis (active); Chronic hepatitis C (active); Syphilis (active)
+- Medications: Spironolactone 100 MG Oral Tablet (authored 2026-03-09); Thiamine 100 MG Oral Tablet (authored 2026-03-09); Omeprazole 20 MG Oral Capsule (authored 2026-03-09); Spironolactone 100 MG Oral Tablet (authored 2026-03-10); Thiamine 100 MG Oral Tablet (authored 2026-03-10); Omeprazole 20 MG Oral Capsule (authored 2026-03-10)
+- Allergies: (none)
+- Recent Encounters: Encounter (2026-03-10); Encounter (2026-03-09)
+- Recent Observations: Alcohol Use Disorder Identification Test total score [AUDIT-C]=18 score; Aspartate aminotransferase in Serum=98 U/L; Alanine aminotransferase in Serum=125 U/L; Bilirubin total in Serum=2.8 mg/dL; Alkaline phosphatase in Serum=145 U/L; Urea nitrogen in Serum=7 mg/dL; Creatinine in Serum=.7 mg/dL; Glucose in Serum=82 mg/dL; Calcium in Serum=8.1 mg/dL; Sodium in Serum=133 mEq/L; Potassium in Serum=3.2 mEq/L; Hemoglobin in Blood=9.8 g/dL; Leukocytes in Blood=3.2 10*3/uL; Platelets in Blood=85 10*3/uL; Hematocrit in Blood=30 %; Hemoglobin A1c in Blood=5.2 %; C reactive protein in Serum=45 mg/L; Ferritin in Serum=420 ng/mL; Heart rate=94 /min; Body mass index=21.4 kg/m2
+- Unusual Results: Aspartate aminotransferase in Serum=98 U/L [high]; Alanine aminotransferase in Serum=125 U/L [high]; Bilirubin total in Serum=2.8 mg/dL [high]; Alkaline phosphatase in Serum=145 U/L [high]; Urea nitrogen in Serum=7 mg/dL [low]; Sodium in Serum=133 mEq/L [low]; Potassium in Serum=3.2 mEq/L [low]; Hemoglobin in Blood=9.8 g/dL [low]; Leukocytes in Blood=3.2 10*3/uL [low]; Platelets in Blood=85 10*3/uL [low]; Hematocrit in Blood=30 % [low]; C reactive protein in Serum=45 mg/L [high]; Ferritin in Serum=420 ng/mL [high]
+- Care Plans: (none)
+
+Summary for Patient
+
+Current Issues
+- Abnormal observation: Aspartate aminotransferase in Serum=98 U/L [high]
+- Abnormal observation: Alanine aminotransferase in Serum=125 U/L [high]
+- Abnormal observation: Bilirubin total in Serum=2.8 mg/dL [high]
+- Active condition: Alcohol use disorder (active)
+- Active condition: Alcoholic liver cirrhosis (active)
+- Active medication context: Spironolactone 100 MG Oral Tablet (authored 2026-03-09)
+- Recent acute utilization: Encounter (2026-03-10)
+
+Recent Changes
+- Review latest observations for clinically meaningful trend changes.
+- Review active condition list for unresolved or high-risk chronic
+  problems.
+- Reconcile active medication requests with current treatment intent and
+  timing.
+- Review recent encounter timeline for acute utilization changes and
+  transitions of care.
+- These are the main things that look different from recent records.
+
+Risks / Follow-up
+- Validate absence of allergy records with chart history.
+- Consider whether care coordination plans are missing or documented
+  outside FHIR CarePlan.
+- Consider asking your care team about next tests, medicines, and warning
+  signs.
+
+What to Do Today
+- Take medications exactly as prescribed.
+- Monitor breathing, swelling, and energy level.
+- Track weight daily and note sudden changes.
+
+This Week
+- Keep follow-up appointments and bring your medication list.
+- Ask your care team to clarify any unclear medication or plan instructions.
+
+Call Your Care Team Now If
+- Breathing gets worse, swelling increases, or you feel faint/confused.
+- You have side effects after a medication change.
